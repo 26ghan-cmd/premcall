@@ -37,6 +37,8 @@ the match centre offers the demo match only and calls work best on the same netw
 ## What's in it
 
 - **Rooms by link:** share `?room=your-room-name` and up to 6 people can join.
+- **Camera off by default:** the waiting room starts with your camera off; turn
+  it on there before joining, or any time in the call.
 - **Joins with whatever works:** no webcam, or a camera busy in another app? You
   join with audio only. No devices or permission blocked? You can still watch,
   listen and chat.

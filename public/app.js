@@ -75,6 +75,10 @@ async function startPreview() {
   if (!localStream) localStream = new MediaStream(); // watch-only
   $('#preview').srcObject = hasCam ? localStream : null;
   $('#preview').closest('.preview-wrap').classList.toggle('no-camera', !hasCam);
+  // Camera starts off in the waiting room; turn it on here (or later in the call).
+  if (hasCam) cameraTrack().enabled = false;
+  $('#previewCamBtn').hidden = !hasCam;
+  renderPreviewCam();
 
   const note = $('#lobbyError');
   note.classList.toggle('info', hasMic || hasCam);
@@ -90,6 +94,22 @@ async function startPreview() {
   joinBtn.textContent = 'Join the room';
 }
 startPreview();
+
+function renderPreviewCam() {
+  const on = !!cameraTrack()?.enabled;
+  const btn = $('#previewCamBtn');
+  btn.textContent = on ? '📷 Turn camera off' : '📷 Turn camera on';
+  btn.setAttribute('aria-pressed', String(on));
+  btn.classList.toggle('on', on);
+  $('#preview').closest('.preview-wrap').classList.toggle('cam-off', !on);
+}
+
+$('#previewCamBtn').onclick = () => {
+  const track = cameraTrack();
+  if (!track) return;
+  track.enabled = !track.enabled;
+  renderPreviewCam();
+};
 
 let joinStarted = false;
 $('#joinForm').addEventListener('submit', (e) => {
@@ -120,6 +140,7 @@ $('#joinForm').addEventListener('submit', (e) => {
 
   addTile('me', myName + ' (you)', true);
   setTileStream('me', localStream);
+  applyTileState('me', localState()); // join with the camera as you left it in the lobby
   buildReactionTray();
   renderStage();
 

@@ -807,3 +807,18 @@ body.offline #call::before {
 .replay-hint { grid-column: 1 / -1; font-size: 12px; }
 .prob-note { margin: 0 0 4px; font-size: 11px; color: var(--muted); }
 .fineprint { color: var(--muted); font-size: 11px; text-align: center; margin: 8px 0 0; opacity: 0.8; }
+
+/* Waiting-room camera toggle (camera starts off) */
+.preview-wrap { position: relative; }
+.preview-wrap.cam-off:not(.no-camera) video { visibility: hidden; }
+.preview-wrap.cam-off:not(.no-camera)::before {
+  content: "Your camera is off"; position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; color: var(--muted);
+}
+.preview-cam {
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+  border: 1px solid var(--line); background: rgba(20, 0, 26, 0.75); color: var(--text);
+  border-radius: 999px; padding: 8px 16px; font-size: 14px; white-space: nowrap;
+}
+.preview-cam:hover { border-color: var(--accent); }
+.preview-cam.on { background: rgba(20, 0, 26, 0.55); }
