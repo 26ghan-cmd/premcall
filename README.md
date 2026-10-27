@@ -25,8 +25,8 @@ Only needed to try changes before putting them live. You need
 [Node.js](https://nodejs.org) 18 or newer and a fresh copy of this repository:
 
 ```bash
-git clone https://github.com/26ghan-cmd/matchday-call.git
-cd matchday-call
+git clone https://github.com/26ghan-cmd/premcall.git
+cd premcall
 npm install
 npm start
 ```
