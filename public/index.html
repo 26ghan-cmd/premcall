@@ -244,6 +244,15 @@
       <h2>Sync with your TV</h2>
       <p class="hint">Everyone's TV or stream runs at a different delay. Sync once, and friends whose TV is ahead of yours are held back, so you never hear a cheer before you see the goal.</p>
 
+      <div class="auto-box">
+        <label class="toggle-row">
+          <input type="checkbox" id="autoToggle" checked>
+          <span><strong>Auto-sync</strong> <small class="auto-badge">no tapping</small><br><small id="autoStatus">Starting…</small></span>
+        </label>
+        <p class="hint">Listens for your TV’s sound through your mic and lines you up with friends automatically. The audio never leaves your device; only a rough loudness pattern is shared. Your TV needs to be audible.</p>
+      </div>
+
+      <h3>Or sync by hand</h3>
       <div id="syncModes" class="seg" role="tablist">
         <button type="button" data-mode="clock" class="active">Match clock</button>
         <button type="button" data-mode="kickoff">Kick-off</button>
@@ -307,6 +316,7 @@
   <script src="app.js"></script>
   <script src="match.js"></script>
   <script src="sync.js"></script>
+  <script src="autosync.js"></script>
   <script src="sounds.js"></script>
   <script src="food.js"></script>
 </body>

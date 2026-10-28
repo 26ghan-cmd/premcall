@@ -834,3 +834,9 @@ body.offline #call::before {
 .sync-pause.go { border-color: var(--accent); background: rgba(194, 124, 255, 0.14); }
 .sync-pause.go .pause-count { color: var(--accent); }
 .pause-actions { display: flex; justify-content: space-between; align-items: center; }
+
+/* Auto-sync box in the sync window */
+.auto-box { border: 1px solid var(--accent); border-radius: 12px; padding: 12px 14px; background: rgba(194, 124, 255, 0.08); display: flex; flex-direction: column; gap: 6px; }
+.auto-box .hint { margin: 0; }
+.auto-box .auto-badge { background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 1px 8px; font-size: 11px; font-weight: 700; margin-left: 4px; }
+#autoStatus { color: var(--muted); }

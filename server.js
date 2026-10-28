@@ -10,6 +10,7 @@ const { Server } = require('socket.io');
 const { MatchHub } = require('./match/hub');
 const { zeroFromTap, validTap, computeLags } = require('./match/sync');
 const { kalshiFor } = require('./match/kalshi');
+const { AutoSync, mergeLags } = require('./match/autosync');
 
 const PORT = process.env.PORT || 3000;
 const MAX_PEERS = 6; // mesh calls work well up to ~6 people
@@ -100,13 +101,20 @@ app.get('/api/fixtures', async (req, res) => {
 // zero for each half (server time). See match/sync.js.
 const roomSync = new Map();
 
+const autoSync = new AutoSync();
+
 function syncState(room) {
   const cals = roomSync.get(room) || new Map();
-  const { lags, flagged } = computeLags(cals);
+  const manual = computeLags(cals);
   const members = io.sockets.adapter.rooms.get(room) || new Set();
+  // Automatic (TV audio) positions take priority; hand taps fill the gaps.
+  const auto = autoSync.positions(room);
+  const lags = mergeLags(manual.lags, auto, [...members]);
+  const flagged = manual.flagged.filter((id) => !(id in auto));
   return {
     lags,
     flagged,
+    auto: { listening: autoSync.listening(room), synced: Object.keys(auto) },
     synced: [...cals.entries()].map(([id, c]) => ({ id, halves: [c.h1 != null && 1, c.h2 != null && 2].filter(Boolean) })),
     members: members.size,
   };
@@ -346,6 +354,23 @@ io.on('connection', (socket) => {
     broadcastSync(room);
   });
 
+  // Auto-sync: a few seconds of TV loudness pattern (never audio).
+  socket.on('auto-fp', (chunk = {}) => {
+    const room = socket.data.room;
+    if (!room || tooSoon(socket, 'auto', 1000)) return;
+    const wasListening = autoSync.listening(room).includes(socket.id);
+    if (!autoSync.add(room, socket.id, chunk)) return;
+    const changed = autoSync.update(room);
+    if (changed || !wasListening) broadcastSync(room);
+  });
+
+  socket.on('auto-off', () => {
+    const room = socket.data.room;
+    if (!room) return;
+    autoSync.remove(room, socket.id);
+    broadcastSync(room);
+  });
+
   socket.on('sync-clear', () => {
     const room = socket.data.room;
     if (!room || !roomSync.get(room)?.delete(socket.id)) return;
@@ -427,9 +452,13 @@ io.on('connection', (socket) => {
       chatHistory.delete(room);
       roomSync.delete(room);
       roomFood.delete(room);
+      autoSync.remove(room, socket.id);
       followMatch(room, null); // stop fetching data nobody is watching
-    } else if (roomSync.get(room)?.delete(socket.id)) {
-      broadcastSync(room);
+    } else {
+      const hadSync = roomSync.get(room)?.delete(socket.id);
+      const hadAuto = autoSync.listening(room).includes(socket.id);
+      autoSync.remove(room, socket.id);
+      if (hadSync || hadAuto) broadcastSync(room);
     }
   });
 });

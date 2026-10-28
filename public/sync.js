@@ -87,6 +87,7 @@ function syncLabelFor(id) {
   const lag = sync.lags[sid];
   if (sync.flagged?.includes(sid)) return '📺 Sync needs checking';
   let text = lag == null ? '📺 TV not synced' : lag === 0 ? '📺 TV furthest ahead' : `📺 TV ${fmtSecs(lag)} behind`;
+  if (lag != null && sync.autoSynced?.includes(sid)) text += ' (auto)';
   if (id !== 'me') {
     const d = spoilerDelayFor(id);
     if (d > 0) text += ` · you hear them ${fmtSecs(d)} later`;
@@ -102,7 +103,10 @@ function applyDelays() {
   const changed = signature !== sync.lastSignature;
   sync.lastSignature = signature;
   peers.forEach((peer, id) => {
-    const d = spoilerDelayFor(id);
+    let d = spoilerDelayFor(id);
+    const applied = sync.applied?.[id] ?? 0;
+    if (d > 0 && applied > 0 && Math.abs(d - applied) < 0.4) d = applied; // ignore jitter under 0.4 s
+    (sync.applied ||= {})[id] = d;
     setAudioDelay(id, d);
     delayerFor(id).setDelay(d);
     const tile = tileEl(id);
@@ -252,8 +256,13 @@ function renderSyncButton() {
     return;
   }
   const live = ['1H', '2H'].includes(liveStatus());
-  btn.classList.toggle('nudge', !synced && live);
-  btn.querySelector('span').textContent = synced ? (lag === 0 ? 'Synced' : `Synced · ${fmtSecs(lag)} behind`) : 'Sync TV';
+  const viaAuto = typeof autoSynced === 'function' && autoSynced();
+  const listening = typeof auto !== 'undefined' && auto.on && auto.status === 'listening';
+  btn.classList.toggle('nudge', !synced && live && !listening);
+  const word = viaAuto ? 'Auto-synced' : 'Synced';
+  btn.querySelector('span').textContent = synced
+    ? (lag === 0 ? word : `${word} · ${fmtSecs(lag)} behind`)
+    : listening ? 'Auto-syncing…' : 'Sync TV';
   btn.title = synced ? 'Synced with your TV. Click to re-sync or change settings.' : 'Sync with your TV so nobody spoils a goal';
 }
 
@@ -522,7 +531,9 @@ function finishPause() {
     setTimeout(() => socket.emit('sync', tap), i * 600);
   });
   sync.awaitingResult = true;
-  $('#syncResult').textContent = `Paused for ${fmtSecs(pausedMs / 1000)}. Lining everyone up…`;
+  $('#syncResult').textContent = typeof autoSynced === 'function' && autoSynced()
+    ? `Paused for ${fmtSecs(pausedMs / 1000)}. Auto-sync will confirm the new timing in a few seconds.`
+    : `Paused for ${fmtSecs(pausedMs / 1000)}. Lining everyone up…`;
   toast('Lined up. Enjoy the match!');
 }
 

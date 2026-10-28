@@ -83,6 +83,14 @@ the match centre offers the demo match only and calls work best on the same netw
 - **Settings:** choose microphone, camera and speakers (speaker choice works in
   Chrome and Edge).
 - **Talking ring:** a green outline around whoever is speaking.
+- **Auto-sync (no tapping):** once you join, the app listens for your TV through
+  your mic and lines everyone's TVs up by itself, usually within a minute. It
+  compares the rhythm of the crowd noise and commentary: the same roar reaches a
+  delayed TV a few seconds later, and that shift is the gap. Only a rough
+  loudness pattern (6 numbers, 10 times a second) is sent; the sound itself
+  never leaves your device. Needs the TV to be audible to the mic, so headphones
+  plugged into the TV won't work; tap-to-sync is still there as a fallback, and
+  people synced either way are combined. Can be switched off in the sync window.
 - **Sync with your TV + spoiler shield:** everyone taps ⏱ **Sync TV** when their
   TV's match clock ticks over to a new minute (or at kick-off). The app works out
   how far behind each TV is and, for friends whose TV is ahead of yours, holds back
@@ -115,6 +123,10 @@ match/demo.js    The demo match: fictional clubs, simulated play, modelled odds.
 match/feed.js    Turns data changes into play-by-play lines and stats-based analysis.
 match/ai.js      Optional AI-written analysis (Claude).
 match/sync.js    TV sync maths: from each person's clock taps, how far behind their TV is.
+match/autosync.js  Auto-sync: matches everyone's TV loudness patterns (cross-correlation)
+                 to find the gaps, confirmed by two agreeing estimates.
+public/autosync.js  Measures the TV's loudness in 6 bands (an AudioWorklet, so it keeps
+                 working in a background tab) and sends it every 5 seconds.
 match/kalshi.js  Kalshi prices for Premier League games, matched to our fixtures.
 match/teams.js   Recognising clubs under different names (Man Utd = Manchester United).
 public/app.js    WebRTC: every browser connects directly to every other (a "mesh").
@@ -194,4 +206,5 @@ than every pass.
 
 - A mesh works well for about 6 people. For bigger "pub" rooms, move video to an
   SFU such as LiveKit; the interface can stay the same.
-- Next: live score in the pitch area, then the sync calibration and spoiler shield.
+- Auto-sync needs at least two people with it on, and the TVs must be showing the
+  same broadcast (two different channels' commentary won't match; tap instead).
