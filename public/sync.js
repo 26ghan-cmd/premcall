@@ -57,6 +57,8 @@ function applySyncState(state) {
   applyDelays();
   renderSyncButton();
   renderSyncStatus();
+  renderPauseCard();
+  maybeSuggestPause();
   if (typeof renderPeople === 'function') renderPeople();
 }
 socket.on('joined', ({ sync: state }) => {
@@ -235,6 +237,12 @@ function liveStatus() {
 
 function renderSyncButton() {
   const btn = $('#syncBtn');
+  if (sync.pause) {
+    const left = Math.max(0, Math.ceil((sync.pause.until - Date.now()) / 1000));
+    btn.classList.add('nudge');
+    btn.querySelector('span').textContent = left > 0 ? `Press play in ${left}s` : 'Press play now!';
+    return;
+  }
   const lag = myLag();
   const synced = lag != null;
   btn.classList.toggle('synced', synced);
@@ -271,6 +279,7 @@ function openSync() {
   resetClockTap();
   $('#shieldToggle').checked = sync.shield;
   renderSyncStatus();
+  renderPauseCard();
   $('#syncDialog').showModal();
 }
 
@@ -412,4 +421,117 @@ function renderSyncStatus() {
     sync.awaitingResult = false;
     $('#syncResult').textContent = mine === 0 ? 'Synced.' : `Synced. Your TV is ${fmtSecs(mine)} behind the furthest-ahead TV in the room.`;
   }
+}
+
+
+// =====================================================================
+// Line up the TVs: whoever's TV is ahead pauses it for the gap.
+// Pausing delays your TV by exactly as long as you pause, so after
+// "I've paused" -> countdown -> "It's playing", we shift your sync by the
+// time you were actually paused. Everyone's TVs then match, the spoiler
+// shield has nothing to hold back, and conversation is live again.
+// =====================================================================
+const PAUSE_MIN = 2; // seconds; smaller gaps aren't worth pausing for
+
+// How far your TV is ahead of the furthest-behind synced TV in the room.
+function aheadInfo() {
+  const mine = myLag();
+  if (mine == null || sync.flagged?.includes(myId)) return null;
+  let worst = null;
+  Object.entries(sync.lags).forEach(([id, lag]) => {
+    if (id === myId || lag == null || sync.flagged?.includes(id)) return;
+    if (!worst || lag > worst.lag) worst = { id, lag };
+  });
+  if (!worst) return null;
+  const gap = Math.round((worst.lag - mine) * 10) / 10;
+  if (gap < PAUSE_MIN) return null;
+  return { gap, name: peers.get(worst.id)?.name || 'a friend' };
+}
+
+function renderPauseCard() {
+  const box = $('#syncPause');
+  if (!box) return;
+  box.replaceChildren();
+  const el2 = (tag, cls, text) => Object.assign(document.createElement(tag), { className: cls || '', textContent: text ?? '' });
+
+  if (sync.pause) {
+    const left = Math.max(0, Math.ceil((sync.pause.until - Date.now()) / 1000));
+    box.hidden = false;
+    box.classList.toggle('go', left === 0);
+    box.append(
+      el2('p', 'pause-title', left > 0 ? 'Keep your TV paused…' : 'Press play now!'),
+      el2('p', 'pause-count', left > 0 ? String(left) : '▶'),
+    );
+    const done = el2('button', 'primary-btn', 'It’s playing again');
+    done.type = 'button';
+    done.onclick = finishPause;
+    const cancel = el2('button', 'small-btn', 'Cancel');
+    cancel.type = 'button';
+    cancel.onclick = () => { stopPause(); toast('Pause cancelled. Nothing changed.'); };
+    const row = el2('div', 'pause-actions');
+    row.append(cancel, done);
+    box.appendChild(row);
+    box.appendChild(el2('p', 'hint', 'Tap “It’s playing again” the moment you press play. We measure the pause and line you up automatically.'));
+    return;
+  }
+
+  const info = aheadInfo();
+  box.hidden = !info;
+  box.classList.remove('go');
+  if (!info) return;
+  box.append(
+    el2('p', 'pause-title', `📺 Your TV is ${fmtSecs(info.gap)} ahead of ${info.name}’s`),
+    el2('p', 'hint', `Pause your TV for ${fmtSecs(info.gap)} and everyone will be watching the exact same moment, with no delay on anyone’s voice.`),
+  );
+  const start = el2('button', 'primary-btn', 'I’ve paused my TV');
+  start.type = 'button';
+  start.onclick = () => startPause(info.gap);
+  box.appendChild(start);
+}
+
+function startPause(gap) {
+  sync.pause = { startedAt: Date.now(), until: Date.now() + gap * 1000, gap };
+  clearInterval(sync.pauseTimer);
+  sync.pauseTimer = setInterval(() => {
+    const wasGo = $('#syncPause').classList.contains('go');
+    renderPauseCard();
+    renderSyncButton();
+    if (!wasGo && Date.now() >= sync.pause.until) {
+      toast('▶ Press play now!');
+      if (typeof playSound === 'function') playSound('whistle'); // a cue only you hear
+    }
+  }, 250);
+  renderPauseCard();
+  renderSyncButton();
+}
+
+function stopPause() {
+  clearInterval(sync.pauseTimer);
+  sync.pause = null;
+  renderPauseCard();
+  renderSyncButton();
+}
+
+function finishPause() {
+  if (!sync.pause) return;
+  const pausedMs = Date.now() - sync.pause.startedAt;
+  stopPause();
+  // Your TV now runs pausedMs later than before, so your sync moves by the same amount.
+  Object.values(sync.myTaps).forEach((tap, i) => {
+    tap.tapAt += pausedMs;
+    setTimeout(() => socket.emit('sync', tap), i * 600);
+  });
+  sync.awaitingResult = true;
+  $('#syncResult').textContent = `Paused for ${fmtSecs(pausedMs / 1000)}. Lining everyone up…`;
+  toast('Lined up. Enjoy the match!');
+}
+
+// A one-off nudge (not while the sync window is open) when your TV is well ahead.
+function maybeSuggestPause() {
+  const info = aheadInfo();
+  if (!info || info.gap < 5 || sync.pause || $('#syncDialog').open) return;
+  const key = `${Math.round(info.gap)}`;
+  if (sync.lastPauseHint === key) return;
+  sync.lastPauseHint = key;
+  toast(`Your TV is ${fmtSecs(info.gap)} ahead. Open ⏱ to line everyone up.`);
 }

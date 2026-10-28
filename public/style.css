@@ -822,3 +822,15 @@ body.offline #call::before {
 }
 .preview-cam:hover { border-color: var(--accent); }
 .preview-cam.on { background: rgba(20, 0, 26, 0.55); }
+
+/* Line up the TVs (pause card in the sync window) */
+.sync-pause {
+  border: 1px solid var(--gold); border-radius: 12px; padding: 12px 14px;
+  background: rgba(245, 197, 66, 0.08); display: flex; flex-direction: column; gap: 8px;
+}
+.sync-pause .pause-title { font-weight: 700; }
+.sync-pause .primary-btn { align-self: flex-start; }
+.pause-count { font-size: 56px; font-weight: 900; line-height: 1; text-align: center; font-variant-numeric: tabular-nums; color: var(--gold); }
+.sync-pause.go { border-color: var(--accent); background: rgba(194, 124, 255, 0.14); }
+.sync-pause.go .pause-count { color: var(--accent); }
+.pause-actions { display: flex; justify-content: space-between; align-items: center; }

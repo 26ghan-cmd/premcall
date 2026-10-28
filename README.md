@@ -90,6 +90,11 @@ the match centre offers the demo match only and calls work best on the same netw
   arrives before you've seen the goal. The people list shows everyone's lag. A
   sync that's more than 2½ minutes off from everyone else's is ignored and that
   person is asked to check it. The shield can be switched off in the sync window.
+- **Line up the TVs:** whoever's TV is ahead gets a prompt in the sync window to
+  pause it for the exact gap ("Your TV is 30s ahead of Sam's"). They tap when they
+  pause, a countdown says when to press play, and the app measures the pause and
+  updates their sync. Every TV then shows the same moment, nothing is held back,
+  and conversation is live.
   Screen shares aren't held back.
 - **Spoiler delay for match data:** in Settings, hold back the match centre by
   10–90 seconds so the score never changes before your TV shows the goal.
